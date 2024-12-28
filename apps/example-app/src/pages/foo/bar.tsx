@@ -1,3 +1,5 @@
+import './bars.css'
+
 export const route = {
   test: 'sss',
 }
