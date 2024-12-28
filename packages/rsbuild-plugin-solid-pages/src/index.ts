@@ -20,7 +20,7 @@ function genClientCode(routes: any[]) {
     const componentName = `${routeName}$default`
 
     if (!route.isLazy) {
-      routeImports.push(`import ${componentName} from '${normalizePath(route.componentPath)}?pick=default';`)
+      routeImports.push(`import ${componentName} from '${normalizePath(route.componentPath)}?pick=default&pick=css';`)
     }
     if (route.hasConfig) {
       routeImports.push(`import {route as ${routeName}} from '${normalizePath(route.componentPath)}?pick=route';`)
@@ -28,7 +28,7 @@ function genClientCode(routes: any[]) {
     else {
       routeImports.push(`const ${routeName} = {};`)
     }
-    const componentStr = route.isLazy ? `lazy(() => import('${normalizePath(route.componentPath)}?pick=default'))` : componentName
+    const componentStr = route.isLazy ? `lazy(() => import('${normalizePath(route.componentPath)}?pick=default&pick=css'))` : componentName
     routeStrs.push(`{path: '${route.path}', component: ${componentStr}, info: ${JSON.stringify(route.info)}, ...${routeName}}`)
   })
 
@@ -133,8 +133,10 @@ export default function solidPagesPlugin(config?: {
         return true
       } }, ({ code, resourceQuery }) => {
         const query = new URLSearchParams(resourceQuery)
-        const pick = query.get('pick')?.split(',')
-        if (!pick) {
+
+        const pick = query.getAll('pick')
+
+        if (!pick || pick.length === 0) {
           return code
         }
 
