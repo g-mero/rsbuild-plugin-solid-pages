@@ -3,10 +3,11 @@ import { filterExports } from '../src/module'
 
 const testCode = `
 import 'style.css'
+import outer from 'xxxx';
 const dead_code = 1
 export const a = 1
 const b = 2
-export { b }
+export { b,outer }
 const c = 3
 export { c as d }
 export default c
@@ -21,9 +22,9 @@ it('filter css and default', () => {
 })
 
 it('filter named exports', () => {
-  const result = filterExports(testCode, ['a', 'd'])
+  const result = filterExports(testCode, ['a', 'd', 'outer'])
 
   console.log(result)
 
-  expect(result).toBe('export var a=1;var c=3;export{c as d};')
+  expect(result).toBe('import outer from"xxxx";export var a=1;var c=3;export{outer,c as d};')
 })
