@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
-    "clean": "rimraf ./apps/example-app/node_modules ./packages/rsbuild-plugin-solid-pages/node_modules .turbo node_modules",
+    "clean": "rimraf -g ./**/node_modules ./**/.turbo",
     "pub": "pnpm --filter rsbuild-plugin-solid-pages pub",
     "test": "pnpm --filter rsbuild-plugin-solid-pages test",
     "release": "commit-and-tag-version -i CHANGELOG.md --same-file",
