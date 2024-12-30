@@ -1,4 +1,10 @@
 {
   "extends": "@repo/ts-config/rsbuild.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["src/*"]
+    }
+  },
   "include": ["src"]
 }
