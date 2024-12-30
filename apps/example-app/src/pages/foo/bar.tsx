@@ -1,4 +1,4 @@
-import './bar.scss'
+import '~/pages/foo/bar.scss'
 
 export const route = {
   test: 'sss',
