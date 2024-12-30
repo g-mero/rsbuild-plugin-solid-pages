@@ -6,7 +6,7 @@ import { filePathToRoute, getPageFiles, getTitleFromPath } from './files'
 import { filterExports } from './module'
 import { checkRouteFileStatus } from './route-config'
 import { TempDummyModule } from './temp-module'
-import { normalizePath } from './utils'
+import { normalizePath, strIsInclude } from './utils'
 
 const defaultExts = ['mdx']
 const defaultDir = 'src/pages'
@@ -20,7 +20,7 @@ function genClientCode(routes: any[]) {
     const componentName = `${routeName}$default`
 
     if (!route.isLazy) {
-      routeImports.push(`import ${componentName} from '${normalizePath(route.componentPath)}?pick=default&pick=css';`)
+      routeImports.push(`import ${componentName} from '${normalizePath(route.componentPath)}?pick=default&pick=style-imports&pick=side-effects';`)
     }
     if (route.hasConfig) {
       routeImports.push(`import {route as ${routeName}} from '${normalizePath(route.componentPath)}?pick=route';`)
@@ -28,7 +28,7 @@ function genClientCode(routes: any[]) {
     else {
       routeImports.push(`const ${routeName} = {};`)
     }
-    const componentStr = route.isLazy ? `lazy(() => import('${normalizePath(route.componentPath)}?pick=default&pick=css'))` : componentName
+    const componentStr = route.isLazy ? `lazy(() => import('${normalizePath(route.componentPath)}?pick=default&pick=style-imports&pick=side-effects'))` : componentName
     routeStrs.push(`{path: '${route.path}', component: ${componentStr}, info: ${JSON.stringify(route.info)}, ...${routeName}}`)
   })
 
@@ -131,16 +131,17 @@ export default function solidPagesPlugin(config?: {
       // pick
       api.transform({ test() {
         return true
-      } }, ({ code, resourceQuery }) => {
+      } }, ({ code, resourceQuery, resourcePath }) => {
         const query = new URLSearchParams(resourceQuery)
+        const fileExt = (resourcePath.split('.').pop() || '').toLowerCase()
 
         const pick = query.getAll('pick')
 
-        if (!pick || pick.length === 0) {
+        if (!pick || pick.length === 0 || !strIsInclude(['tsx', 'jsx', 'js', 'ts'] as const, fileExt)) {
           return code
         }
 
-        const f = filterExports(code, pick)
+        const f = filterExports(code, pick, fileExt)
         return f
       })
     },

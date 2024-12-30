@@ -15,3 +15,7 @@ export const isWindows
 export function normalizePath(id: string): string {
   return path.posix.normalize(isWindows ? slash(id) : id)
 }
+
+export function strIsInclude<T extends readonly string[]>(strs: T, str: string): str is T[number] {
+  return strs.includes(str)
+}

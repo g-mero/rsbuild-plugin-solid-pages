@@ -1,4 +1,29 @@
-import { parseSync, transformSync } from '@swc/core'
+import type { ParserConfig } from '@swc/core'
+import { parseSync, printSync } from '@swc/core'
+import { strIsInclude } from './utils'
+
+function jscParserConfig(ext: 'ts' | 'js' | 'tsx' | 'jsx'): ParserConfig {
+  const res = {
+  } as Record<string, any>
+  const firstChar = ext[0]
+  const lastChar = ext[ext.length - 1]
+  const param = `${firstChar}sx`
+  res.syntax = firstChar === 't' ? 'typescript' : 'ecmascript'
+  res[param] = lastChar === 'x'
+
+  return res as {
+    syntax: 'typescript'
+    tsx: boolean
+  } | {
+    syntax: 'ecmascript'
+    jsx: boolean
+  }
+}
+
+const styleFileExts = ['css', 'scss', 'sass', 'less', 'styl'] as const
+function isStyleExt(ext?: string): ext is typeof styleFileExts[number] {
+  return strIsInclude(styleFileExts, String(ext))
+}
 
 /**
  * 根据源代码和 pick 参数生成只包含 pick 的模块代码。
@@ -6,42 +31,57 @@ import { parseSync, transformSync } from '@swc/core'
  * @param {string[]} picks - 要保留的导出名称数组
  * @returns {string} - 生成的新模块代码
  */
-export function filterExports(sourceCode: string, picks: string[]): string {
-  // 解析源代码为 AST
-  const ast = parseSync(sourceCode, {
-    syntax: 'typescript', // 支持 ts
-    tsx: true, // 支持 TSX
-  })
+export function filterExports(sourceCode: string, picks: string[], ext: 'ts' | 'js' | 'tsx' | 'jsx'): string {
+  const jscParserConf = jscParserConfig(ext)
+  const ast = parseSync(sourceCode, jscParserConf)
 
-  // 筛选 AST 中的导出节点
   const filteredBody = ast.body.filter((node) => {
-    if (node.type === 'ExportNamedDeclaration') {
-      // 处理 export { a, b } 形式
-      node.specifiers = node.specifiers.filter(spec =>
-        spec.type === 'ExportSpecifier' ? picks.includes(spec.exported?.value ? spec.exported.value : spec.orig.value) : false,
-      )
-      return node.specifiers.length > 0
-    }
-    else if (node.type === 'ExportDeclaration') {
-      const type = node.declaration.type
-      switch (type) {
-        case 'FunctionDeclaration':
+    switch (node.type) {
+      // export {a, b}
+      case 'ExportNamedDeclaration':
+        node.specifiers = node.specifiers.filter(spec =>
+          spec.type === 'ExportSpecifier'
+            ? picks.includes(spec.exported?.value ? spec.exported.value : spec.orig.value)
+            : false,
+        )
+        return node.specifiers.length > 0
+
+      case 'ExportDeclaration': {
+        const type = node.declaration.type
+        if (type === 'FunctionDeclaration') {
           return picks.includes(node.declaration.identifier.value)
-
-        case 'VariableDeclaration':
-          return node.declaration.declarations.some(decl => decl.id.type === 'Identifier' ? picks.includes(decl.id.value) : false)
-
-        default:
-          break
+        }
+        else if (type === 'VariableDeclaration') {
+          return node.declaration.declarations.some(decl =>
+            decl.id.type === 'Identifier' ? picks.includes(decl.id.value) : false,
+          )
+        }
+        break
       }
-    }
-    else if (node.type === 'ExportDefaultDeclaration') {
-      // 处理默认导出
-      return picks.includes('default')
-    }
-    else if (node.type === 'ExportDefaultExpression') {
-      // 处理 export default expression 形式
-      return picks.includes('default')
+
+      case 'ExportDefaultDeclaration':
+        // 处理默认导出
+        return picks.includes('default')
+
+      case 'ExportDefaultExpression':
+        // 处理 export default expression 形式
+        return picks.includes('default')
+
+      case 'ImportDeclaration': {
+        const specs = node.specifiers
+        if (specs.length > 0)
+          break
+        const hasCss = picks.includes('style-imports')
+        const hasSideEffects = picks.includes('side-effects')
+        const ext = node.source.value.split('.').pop()
+        if (isStyleExt(ext)) {
+          return hasCss
+        }
+        return hasSideEffects
+      }
+
+      default:
+        break
     }
     return true
   })
@@ -53,21 +93,7 @@ export function filterExports(sourceCode: string, picks: string[]): string {
   }
 
   // 将新 AST 转换为代码
-  const { code: newCode } = transformSync(newAst, {
-    minify: true,
-    jsc: {
-      minify: {
-        compress: {
-          dead_code: true,
-          toplevel: true,
-        },
-      },
-    },
-  })
-
-  if (!picks.includes('css')) {
-    return newCode.replace(/import"(.+?)";/g, '')
-  }
+  const { code: newCode } = printSync(newAst)
 
   return newCode
 }
