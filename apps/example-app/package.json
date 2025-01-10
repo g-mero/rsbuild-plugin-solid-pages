@@ -11,7 +11,7 @@
   "dependencies": {
     "@solidjs/router": "^0.15.2",
     "solid-js": "^1.9.3",
-    "unocss": "^0.65.3"
+    "unocss": "^65.0.0"
   },
   "devDependencies": {
     "@repo/ts-config": "workspace:*",
@@ -19,7 +19,7 @@
     "@rsbuild/plugin-babel": "^1.0.3",
     "@rsbuild/plugin-sass": "^1.1.2",
     "@rsbuild/plugin-solid": "^1.0.4",
-    "@unocss/webpack": "^0.65.3",
+    "@unocss/webpack": "^65.0.0",
     "rsbuild-plugin-solid-pages": "workspace:*"
   }
 }
